@@ -1,0 +1,69 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# VSCode settings
+.vscode/
+
+# PyCharm settings
+.idea/
+
+# MyPy & other linting tools
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
+
+# SQLite database files
+*.sqlite3
+*.db
+
+# dotenv
+.env
+.env.*
+
+# macOS
+.DS_Store
+
+# Dirs and Files
+query.csv
+
+# Edge Driver (need to update after cloning to ensure latest version)
+msedgedriver.exe
+/Driver_Notes

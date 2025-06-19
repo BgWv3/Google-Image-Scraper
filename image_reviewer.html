@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Image Reviewer</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        // Apply dark mode from Tailwind config
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        :root {
+            /* Define color variables for dark mode */
+            --red-900: #b91c1c;
+            --slate-900: #0f172a;
+            --gray-800: #1f2937;
+            --gray-700: #374151;
+            --blue-500: #3b82f6;
+            --indigo-500: #6366f1;
+        }
+        header {
+            /* Sticky header for the page */
+            position: sticky;
+            top: 0;
+            padding: 10px;
+            background-color: var(--slate-900);
+            z-index: 1000;
+        }
+        /* Use Inter font family */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+            background-color: var(--slate-900);
+            /* Smooth scrolling for jumps */
+        }
+        /* Style for footer */
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            padding: 10px;
+            background-color: var(--slate-900);
+            border-top: 1px solid var(--gray-700);
+            z-index: 1000;
+        }
+
+        /* Style for the file input button */
+        .file-input-button {
+            cursor: pointer;
+            padding: 0.75rem 1.5rem;
+            text-align: center;
+            color: white;
+            background-color: #4f46e5;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s;
+        }
+
+        .file-input-button:hover {
+            background-color: #6366f1;
+        }
+
+        /* Hide the default file input */
+        #csv-file-input {
+            display: none;
+        }
+
+        #process-csv-button {
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        /* Simple loader animation */
+        .loader {
+            border: 4px solid #4b5563;
+            /* dark:border-gray-700 */
+            border-top: 4px solid #6366f1;
+            /* dark:border-indigo-500 */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Style for selected image containers */
+        .selected-image-container {
+            outline: 6px solid #3b82f6;
+            /* blue-500 */
+            outline-offset: 2px;
+            border-radius: 0.5rem;
+            /* Match container rounding */
+        }
+
+        /* Highlight for the current query section */
+        .current-query-section {
+            background-color: #1f2937;
+            /* dark:bg-gray-800 */
+            border: 1px solid #374151;
+            /* dark:border-gray-700 */
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-200">
+    <a id="top"></a>
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- Header Section -->
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white">Image Review Tool</h1>
+            <p class="mt-2 text-md text-gray-400">Select your <code
+                    class="bg-gray-700 text-sm p-1 rounded">query_results.csv</code> file to begin.</p>
+        </header>
+
+        <!-- Main Controls -->
+        <div class="max-w-xl mx-auto bg-gray-800 p-6 rounded-xl shadow-md flex flex-col items-center space-y-4 mb-8">
+            <label for="csv-file-input" class="file-input-button font-medium">
+                Choose CSV File
+            </label>
+            <input type="file" id="csv-file-input" accept=".csv">
+            <p id="file-name" class="text-sm text-gray-500">No file selected.</p>
+
+            <!-- Jump Navigation & Process Button -->
+            <div id="navigation-controls"
+                class="w-full pt-4 border-t border-gray-700 flex-col sm:flex-row items-center justify-center gap-4 hidden">
+                <div class="flex items-center gap-2">
+                    <label for="jump-to-query" class="font-medium text-sm text-gray-300">Jump to Query:</label>
+                    <select id="jump-to-query"
+                        class="rounded-md border-gray-600 bg-gray-700 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500"></select>
+                </div>
+                <button id="process-csv-button"
+                    class="mt-4 sm:mt-0 w-full items-center sm:w-auto bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 disabled:bg-gray-500 disabled:cursor-not-allowed"
+                    disabled>
+                    Generate Reviewed CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Loader and Status Messages -->
+        <div id="status-container" class="text-center my-8">
+            <div id="loader" class="loader mx-auto hidden"></div>
+            <p id="status-message" class="text-gray-400 mt-4"></p>
+        </div>
+
+        <!-- Results Container -->
+        <main id="results-container" class="mt-10 space-y-4">
+            <!-- Query results will be dynamically inserted here -->
+        </main>
+
+        <!-- Footer -->
+        <footer id="page-footer">
+            <a href="#top" class="text-indigo-400 hover:text-indigo-300 font-medium">Back to Top &uarr;</a>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('csv-file-input');
+            const fileNameDisplay = document.getElementById('file-name');
+            const resultsContainer = document.getElementById('results-container');
+            const loader = document.getElementById('loader');
+            const statusMessage = document.getElementById('status-message');
+            const navigationControls = document.getElementById('navigation-controls');
+            const jumpToQuerySelect = document.getElementById('jump-to-query');
+            const processButton = document.getElementById('process-csv-button');
+            const pageFooter = document.getElementById('page-footer');
+
+            let selectedImages = {};
+            let totalQueries = 0;
+
+            // Listen for file selection
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // Listen for jump-to selection
+            jumpToQuerySelect.addEventListener('change', (e) => {
+                const targetId = e.target.value;
+
+                // Remove highlight from all sections first
+                document.querySelectorAll('#results-container section').forEach(sec => {
+                    sec.classList.remove('current-query-section');
+                });
+
+                if (targetId) {
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView();
+                        // Add highlight to the new target section
+                        targetElement.classList.add('current-query-section');
+                    }
+                }
+            });
+
+            // Listen for process button click
+            processButton.addEventListener('click', generateReviewedCSV);
+
+            /**
+             * Handles the file selection event.
+             */
+            function handleFileSelect(event) {
+                const file = event.target.files[0];
+                if (!file) {
+                    fileNameDisplay.textContent = 'No file selected.';
+                    return;
+                }
+                if (!file.name.endsWith('.csv')) {
+                    fileNameDisplay.textContent = 'Please select a .csv file.';
+                    resetState();
+                    return;
+                }
+
+                fileNameDisplay.textContent = `Selected: ${file.name}`;
+                showStatus('loading', 'Processing CSV file...');
+                resetState();
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        const csvText = e.target.result;
+                        const data = parseCSV(csvText);
+                        const groupedData = groupDataByQuery(data);
+                        totalQueries = groupedData.size;
+                        displayResults(groupedData);
+                        showStatus('success', `Successfully loaded ${data.length} image records across ${totalQueries} queries.`);
+                        if (totalQueries > 0) {
+                            navigationControls.classList.remove('hidden');
+                            pageFooter.classList.remove('hidden');
+                        }
+                    } catch (error) {
+                        console.error("Error processing file:", error);
+                        showStatus('error', 'Failed to process the CSV file. Check console for details.');
+                    }
+                };
+                reader.readAsText(file);
+            }
+
+            /**
+             * Resets the application state for a new file upload.
+             */
+            function resetState() {
+                selectedImages = {};
+                totalQueries = 0;
+                resultsContainer.innerHTML = '';
+                jumpToQuerySelect.innerHTML = '';
+                processButton.disabled = true;
+                navigationControls.classList.add('hidden');
+                pageFooter.classList.add('hidden');
+            }
+
+            /**
+             * Parses the raw CSV text into an array of objects.
+             */
+            function parseCSV(csvText) {
+                const lines = csvText.trim().split(/\r\n|\n/);
+                if (lines.length < 2) return [];
+
+                const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+                const queryIndex = headers.indexOf('query');
+                const imageUrlIndex = headers.indexOf('image url');
+
+                if (queryIndex === -1 || imageUrlIndex === -1) {
+                    throw new Error('CSV must contain "Query" and "Image URL" columns.');
+                }
+
+                const records = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const data = lines[i].split(',');
+                    if (data.length >= headers.length) {
+                        const query = data[queryIndex]?.trim();
+                        const imageUrl = data[imageUrlIndex]?.trim();
+                        if (query && imageUrl) {
+                            records.push({ Query: query, ImageURL: imageUrl });
+                        }
+                    }
+                }
+                return records;
+            }
+
+            /**
+             * Groups the parsed data by the 'Query' key.
+             */
+            function groupDataByQuery(data) {
+                const grouped = new Map();
+                data.forEach(item => {
+                    const query = item.Query;
+                    if (!grouped.has(query)) {
+                        grouped.set(query, []);
+                    }
+                    grouped.get(query).push(item.ImageURL);
+                });
+                return grouped;
+            }
+
+            /**
+             * Renders the grouped data onto the webpage.
+             */
+            function displayResults(groupedData) {
+                jumpToQuerySelect.innerHTML = '<option value="">Select a query...</option>';
+                const sortedQueries = [...groupedData.keys()].sort();
+
+                for (const query of sortedQueries) {
+                    const queryId = `query-${query.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                    const option = document.createElement('option');
+                    option.value = queryId;
+                    option.textContent = query;
+                    jumpToQuerySelect.appendChild(option);
+                }
+
+                const fragment = document.createDocumentFragment();
+                for (const query of sortedQueries) {
+                    const urls = groupedData.get(query);
+                    const queryId = `query-${query.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
+                    const querySection = document.createElement('section');
+                    querySection.id = queryId;
+                    querySection.className = 'mb-12 transition-all duration-300';
+
+                    // Make the header sticky to the top on scroll
+                    const queryHeader = document.createElement('div');
+                    queryHeader.className = 'sticky top-[90px] z-10 bg-gray-900 py-4 mb-6 border-b border-gray-700';
+                    const queryTitle = document.createElement('h2');
+                    queryTitle.className = 'text-2xl font-bold text-white';
+                    queryTitle.textContent = query;
+                    queryHeader.appendChild(queryTitle);
+
+                    const imageGrid = document.createElement('div');
+                    imageGrid.className = 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4';
+
+                    urls.forEach(url => {
+                        const imgContainer = document.createElement('div');
+                        imgContainer.className = 'bg-gray-800 rounded-lg shadow-sm overflow-hidden aspect-w-1 aspect-h-1 cursor-pointer transition-all';
+
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.alt = `Result for ${query}`;
+                        img.className = 'w-full h-full object-cover';
+
+                        // Add click listener to the container instead of the image
+                        imgContainer.addEventListener('click', () => handleImageClick(imgContainer, img, query));
+
+                        img.onerror = function () {
+                            this.parentElement.innerHTML = `<div class="w-full h-full bg-gray-700 flex items-center justify-center text-center p-2"><p class="text-xs text-red-400">Could not load image</p></div>`;
+                        };
+
+                        imgContainer.appendChild(img);
+                        imageGrid.appendChild(imgContainer);
+                    });
+
+                    querySection.appendChild(queryHeader);
+                    querySection.appendChild(imageGrid);
+                    fragment.appendChild(querySection);
+                }
+                resultsContainer.appendChild(fragment);
+            }
+
+            /**
+             * Handles the logic when an image container is clicked.
+             */
+            function handleImageClick(clickedContainer, clickedImg, query) {
+                selectedImages[query] = clickedImg.src;
+
+                // Find all containers in the same grid and remove the selection class
+                const imageGrid = clickedContainer.closest('.grid');
+                imageGrid.querySelectorAll('.bg-gray-800').forEach(container => {
+                    container.classList.remove('selected-image-container');
+                });
+
+                // Add the selection class to the clicked container
+                clickedContainer.classList.add('selected-image-container');
+
+                updateProcessButtonState();
+            }
+
+            /**
+             * Enables or disables the process button based on selections.
+             */
+            function updateProcessButtonState() {
+                const selectionsMade = Object.keys(selectedImages).length;
+                if (selectionsMade === totalQueries && totalQueries > 0) {
+                    processButton.disabled = false;
+                    processButton.textContent = 'Generate Reviewed CSV';
+                } else {
+                    processButton.disabled = true;
+                    processButton.textContent = `Select ${totalQueries - selectionsMade} more`;
+                }
+            }
+
+            /**
+             * Generates and downloads the reviewed CSV file.
+             */
+            function generateReviewedCSV() {
+                let csvContent = "Query,Image URL\r\n";
+                const sortedQueries = Object.keys(selectedImages).sort();
+
+                sortedQueries.forEach(query => {
+                    const url = selectedImages[query];
+                    const escapedQuery = `"${query.replace(/"/g, '""')}"`;
+                    csvContent += `${escapedQuery},${url}\r\n`;
+                });
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement("a");
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", "query_reviewed.csv");
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+                }
+            }
+
+            /**
+             * Shows a status message and handles the loader.
+             */
+            function showStatus(type, message) {
+                loader.classList.add('hidden');
+                statusMessage.className = 'text-gray-400 mt-4'; // reset classes
+
+                switch (type) {
+                    case 'loading':
+                        loader.classList.remove('hidden');
+                        break;
+                    case 'success':
+                        statusMessage.classList.add('text-green-400');
+                        break;
+                    case 'error':
+                        statusMessage.classList.add('text-red-400');
+                        break;
+                }
+                statusMessage.textContent = message;
+
+                if (type === 'success') {
+                    setTimeout(() => {
+                        if (statusMessage.textContent === message) statusMessage.textContent = '';
+                    }, 5000);
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
